@@ -172,6 +172,7 @@ function addEvent(e) {
   eventInput.value = '';
   renderEvents();
   renderCalendar();
+  saveEvents();
 }
 
 /**
@@ -187,6 +188,7 @@ function removeEvent(index) {
   // TODO 3: Torna a cridar renderEvents() i renderCalendar()
   renderEvents();
   renderCalendar();
+  saveEvents();
 }
 
 
@@ -201,6 +203,7 @@ eventForm.addEventListener('submit', addEvent);
  */
 function saveEvents() {
   // TODO: Utilitza JSON.stringify(events) i localStorage.setItem('calendar_events', ...)
+  localStorage.setItem('calendar_events', JSON.stringify(events));
 }
 
 /**
@@ -208,7 +211,12 @@ function saveEvents() {
  */
 function loadEvents() {
   // TODO: Utilitza localStorage.getItem('calendar_events') i JSON.parse()
+  const eventsData = localStorage.getItem('calendar_events');
+  if (eventsData) {
+    return JSON.parse(eventsData);
+  }
   // Retorna l'objecte obtingut o un objecte buit {} si no hi havia res guardat.
+  return {};
 }
 
 // TODO: Modifica addEvent() i removeEvent() perquè cridin a saveEvents() després de modificar dades.
@@ -219,7 +227,7 @@ function loadEvents() {
 // ==========================================================================
 
 /**
- * Mostra una notificació del sistema si tenim permís concedit.
+   * Mostra una notificació del sistema si tenim permís concedit.
  */
 function sendNotification(title, body) {
   // TODO: Comprova si Notification.permission === 'granted' i crea una new Notification()
@@ -240,6 +248,7 @@ function sendNotification(title, body) {
 
 function initApp() {
   // TODO 1: Carrega els esdeveniments des de LocalStorage cridant loadEvents()
+  events = loadEvents();
   // TODO 2: Crida inicial a renderCalendar() per dibuixar la interfície inicial
   renderCalendar();
 }
