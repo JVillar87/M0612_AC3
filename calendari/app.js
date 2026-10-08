@@ -24,6 +24,7 @@ const eventsList = document.getElementById('events-list');
 
 const notifyBtn = document.getElementById('notify-btn');
 const shareBtn = document.getElementById('share-btn');
+const apiFeedback = document.getElementById('api-feedback');
 
 const monthNames = [
   "Gener", "Febrer", "Març", "Abril", "Maig", "Juny",
@@ -173,6 +174,10 @@ function addEvent(e) {
   renderEvents();
   renderCalendar();
   saveEvents();
+  sendNotification(
+    'Nou esdeveniment',
+    `S'ha afegit un esdeveniment per al ${selectedDateKey}.`
+  );
 }
 
 /**
@@ -226,21 +231,89 @@ function loadEvents() {
 // FASE 4: RESTA D'APIS DEL NAVEGADOR (NOTIFICATION I WEB SHARE)
 // ==========================================================================
 
+function showApiFeedback(message, type) {
+  apiFeedback.textContent = message;
+  apiFeedback.className = `api-feedback ${type}`;
+}
+
 /**
    * Mostra una notificació del sistema si tenim permís concedit.
  */
 function sendNotification(title, body) {
-  // TODO: Comprova si Notification.permission === 'granted' i crea una new Notification()
-  // Mira a la pràctica AC2 com es fa!
+  if (!('Notification' in window)) {
+    showApiFeedback("Aquest navegador no suporta notificacions del sistema.", "error");
+    return false;
+  }
+
+  if (!window.isSecureContext) {
+    showApiFeedback("Les notificacions només funcionen en una connexió segura (HTTPS o localhost).", "error");
+    return false;
+  }
+
+  if (Notification.permission !== 'granted') {
+    return false;
+  }
+
+  try {
+    new Notification(title, { body });
+    return true;
+  } catch (error) {
+    console.error('No s’ha pogut mostrar la notificació.', error);
+    showApiFeedback("No s’ha pogut mostrar la notificació del sistema.", "error");
+    return false;
+  }
 }
+
 
 // TODO: Escoltador d'esdeveniment per a 'notifyBtn' (Sol·licitar permisos de notificació)
 // Mira a la pràctica AC2 com es fa!
+notifyBtn.addEventListener("click", () => {
+  if (!('Notification' in window)) {
+    showApiFeedback("Aquest navegador no suporta notificacions del sistema.", "error");
+    return;
+  }
 
+  if (!window.isSecureContext) {
+    showApiFeedback("Obre l’aplicació amb HTTPS o des de localhost per activar notificacions.", "error");
+    return;
+  }
+
+  if (Notification.permission === 'denied') {
+    showApiFeedback("Les notificacions estan bloquejades. Permet-les a la configuració del navegador.", "error");
+    return;
+  }
+
+  Notification.requestPermission()
+    .then((permission) => {
+      if (permission === 'granted') {
+        showApiFeedback("Notificacions activades.", "success");
+        sendNotification('Notificació', 'Tens permís per rebre notificacions.');
+      } else {
+        showApiFeedback("No s’han concedit permisos per a les notificacions.", "error");
+      }
+    })
+    .catch((error) => {
+      console.error('No s’ha pogut sol·licitar el permís de notificacions.', error);
+      showApiFeedback("No s’ha pogut sol·licitar el permís de notificacions.", "error");
+    });
+});
 
 // TODO: Escoltador d'esdeveniment per a 'shareBtn' (Web Share API amb fallback a clipboard)
 // Mira a la pràctica AC2 com es fa!
-
+shareBtn.addEventListener("click", () => {
+  const shareData = {
+    title: 'Calendari d\'esdeveniments',
+    text: 'Consulta els meus esdeveniments al calendari!',
+    url: window.location.href
+  };
+  if (navigator.share) {
+    navigator.share(shareData);
+  } else {
+    // Fallback a clipboard
+    navigator.clipboard.writeText(window.location.href);
+    showApiFeedback("Enllaç copiat al porta-retalls.", "success");
+  }
+});
 
 // ==========================================================================
 // INICIALITZACIÓ DE L'APLICACIÓ

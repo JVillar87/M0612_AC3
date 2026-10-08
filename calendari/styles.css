@@ -125,6 +125,20 @@ button[type="submit"],
     margin-top: 12px;
 }
 
+.api-feedback {
+    min-height: 1.25rem;
+    margin-top: 8px;
+    font-size: 0.85rem;
+}
+
+.api-feedback.error {
+    color: #b91c1c;
+}
+
+.api-feedback.success {
+    color: #047857;
+}
+
 ul {
     list-style: none;
     margin-top: 10px;
