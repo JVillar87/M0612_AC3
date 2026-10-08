@@ -174,10 +174,7 @@ function addEvent(e) {
   renderEvents();
   renderCalendar();
   saveEvents();
-  sendNotification(
-    'Nou esdeveniment',
-    `S'ha afegit un esdeveniment per al ${selectedDateKey}.`
-  );
+  sendNotification("Nova tasca creada", `S'ha afegit una tasca per al ${selectedDateKey}`);
 }
 
 /**
@@ -218,7 +215,11 @@ function loadEvents() {
   // TODO: Utilitza localStorage.getItem('calendar_events') i JSON.parse()
   const eventsData = localStorage.getItem('calendar_events');
   if (eventsData) {
-    return JSON.parse(eventsData);
+    try {
+      return JSON.parse(eventsData);
+    } catch (error) {
+      console.error('Error al parsejar els esdeveniments desats a LocalStorage:', error);
+    }
   }
   // Retorna l'objecte obtingut o un objecte buit {} si no hi havia res guardat.
   return {};
@@ -239,81 +240,83 @@ function showApiFeedback(message, type) {
 /**
    * Mostra una notificació del sistema si tenim permís concedit.
  */
-function sendNotification(title, body) {
-  if (!('Notification' in window)) {
+async function sendNotification(title, body) {
+  if (!("Notification" in window)) {
     showApiFeedback("Aquest navegador no suporta notificacions del sistema.", "error");
-    return false;
+    return;
   }
 
-  if (!window.isSecureContext) {
-    showApiFeedback("Les notificacions només funcionen en una connexió segura (HTTPS o localhost).", "error");
-    return false;
+  let permission = Notification.permission;
+  if (permission === "default") {
+    permission = await Notification.requestPermission();
   }
 
-  if (Notification.permission !== 'granted') {
-    return false;
-  }
-
-  try {
+  if (permission === "granted") {
+    // Fem servir els paràmetres pasats a la funció
     new Notification(title, { body });
-    return true;
-  } catch (error) {
-    console.error('No s’ha pogut mostrar la notificació.', error);
-    showApiFeedback("No s’ha pogut mostrar la notificació del sistema.", "error");
-    return false;
+    showApiFeedback("Notificació enviada correctament.", "success");
+  } else {
+    showApiFeedback("Has denegat el permís per rebre notificacions.", "warning");
   }
 }
 
+// Escoltador per al botó de notificacions (Demana permís i envia benvinguda)
+notifyBtn.addEventListener('click', async () => {
+  await sendNotification("Calendari Actiu", "Les notificacions s'han activat correctament!");
+});
 
 // TODO: Escoltador d'esdeveniment per a 'notifyBtn' (Sol·licitar permisos de notificació)
 // Mira a la pràctica AC2 com es fa!
-notifyBtn.addEventListener("click", () => {
-  if (!('Notification' in window)) {
-    showApiFeedback("Aquest navegador no suporta notificacions del sistema.", "error");
-    return;
-  }
-
-  if (!window.isSecureContext) {
-    showApiFeedback("Obre l’aplicació amb HTTPS o des de localhost per activar notificacions.", "error");
-    return;
-  }
-
-  if (Notification.permission === 'denied') {
-    showApiFeedback("Les notificacions estan bloquejades. Permet-les a la configuració del navegador.", "error");
-    return;
-  }
-
-  Notification.requestPermission()
-    .then((permission) => {
-      if (permission === 'granted') {
-        showApiFeedback("Notificacions activades.", "success");
-        sendNotification('Notificació', 'Tens permís per rebre notificacions.');
-      } else {
-        showApiFeedback("No s’han concedit permisos per a les notificacions.", "error");
-      }
-    })
-    .catch((error) => {
-      console.error('No s’ha pogut sol·licitar el permís de notificacions.', error);
-      showApiFeedback("No s’ha pogut sol·licitar el permís de notificacions.", "error");
-    });
+notifyBtn.addEventListener('click', async () => {
+  await sendNotification("Calendari Actiu", "Les notificacions s'han activat correctament!");
 });
 
 // TODO: Escoltador d'esdeveniment per a 'shareBtn' (Web Share API amb fallback a clipboard)
 // Mira a la pràctica AC2 com es fa!
-shareBtn.addEventListener("click", () => {
+shareBtn.addEventListener('click', async () => {
+  if (!selectedDateKey) {
+    showApiFeedback("Selecciona un dia per compartir les teves tasques.", "warning");
+    return;
+  }
+
+  const dayEvents = events[selectedDateKey] || [];
+  if (dayEvents.length === 0) {
+    showApiFeedback(`No hi ha cap tasca per compartir el dia ${selectedDateKey}.`, "warning");
+    return;
+  }
+
+  
+  let textSummary = `Agenda del dia ${selectedDateKey}:\n`;
+  dayEvents.forEach((eventText, index) => {
+    textSummary += `${index + 1}. ${eventText}\n`;
+  });
+
   const shareData = {
-    title: 'Calendari d\'esdeveniments',
-    text: 'Consulta els meus esdeveniments al calendari!',
-    url: window.location.href
+    title: `Agenda del dia ${selectedDateKey}`,
+    text: textSummary
   };
+  
   if (navigator.share) {
-    navigator.share(shareData);
+    try {
+      await navigator.share(shareData);
+      showApiFeedback("Esdeveniments compartits amb èxit!", "success");
+    } catch (error) {
+      if (error.name !== "AbortError") {
+        showApiFeedback("Error en compartir l'esdeveniment.", "error");
+      }
+    }
+  } else if (navigator.clipboard) {
+    try {
+      await navigator.clipboard.writeText(textSummary);
+      showApiFeedback("Resum copiat al porta-retalls amb èxit!", "success");
+    } catch (error) {
+      showApiFeedback("No s'ha pogut copiar al porta-retalls.", "error");
+    }
   } else {
-    // Fallback a clipboard
-    navigator.clipboard.writeText(window.location.href);
-    showApiFeedback("Enllaç copiat al porta-retalls.", "success");
+    showApiFeedback("El teu navegador no suporta cap opció de compartir.", "error");
   }
 });
+
 
 // ==========================================================================
 // INICIALITZACIÓ DE L'APLICACIÓ
