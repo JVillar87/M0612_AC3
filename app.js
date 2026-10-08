@@ -305,14 +305,7 @@ shareBtn.addEventListener('click', async () => {
         showApiFeedback("Error en compartir l'esdeveniment.", "error");
       }
     }
-  } else if (navigator.clipboard) {
-    try {
-      await navigator.clipboard.writeText(textSummary);
-      showApiFeedback("Resum copiat al porta-retalls amb èxit!", "success");
-    } catch (error) {
-      showApiFeedback("No s'ha pogut copiar al porta-retalls.", "error");
-    }
-  } else {
+    } else {
     showApiFeedback("El teu navegador no suporta cap opció de compartir.", "error");
   }
 });
