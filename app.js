@@ -50,12 +50,12 @@ function formatDateKey(year, month, day) {
  */
 function renderCalendar() {
   // TODO 1: Neteja el contingut actual de 'daysGrid'
-  monthYearDisplay.textContent = `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
   daysGrid.innerHTML = '';
 
   // TODO 2: Obtén l'any i el mes de 'currentDate' i actualitza el text de '#monthYearDisplay'
   let year = currentDate.getFullYear();
   let month = currentDate.getMonth();
+  monthYearDisplay.textContent = `${monthNames[month]} ${year}`;
 
   // TODO 3: Càlcul de caselles buides inicials (padding):
   //  - Obtén el primer dia de la setmana del mes: new Date(year, month, 1).getDay()
@@ -64,14 +64,17 @@ function renderCalendar() {
   const paddingDays = firstDayIndex === 0 ? 6 : firstDayIndex - 1;
   //  - Crea les caselles buides (<div class="day empty"></div>) i afegeix-les a 'daysGrid' (appendChild)
   for (let i = 0; i < paddingDays; i++) {
-    const emptyElement = document.createElement('div');
-    emptyElement.classList.add('day', 'empty');
-    daysGrid.appendChild(emptyElement);
+    const emptyDiv = document.createElement('div');
+    emptyDiv.classList.add('day', 'empty');
+    daysGrid.appendChild(emptyDiv);
   }
   // TODO 4: Càlcul de dies totals del mes:
   //  - Utilitza el truc: new Date(year, month + 1, 0).getDate()
   const totalDays = new Date(year, month + 1, 0).getDate();
+  const today = new Date();
+
   // TODO 5: Bucle per dibuixar cada dia (1..totalDays):
+  
   //  - Crea un div amb la classe .day i el text del número de dia
   //  - Genera la clau 'dateKey' fent servir formatDateKey()
   //  - Afegeix la classe .today si el dia, mes i any coincideixen amb la data actual d'avui (new Date())
@@ -79,12 +82,17 @@ function renderCalendar() {
   //  - Afegeix la classe .selected si dateKey === selectedDateKey
   //  - Assigna l'esdeveniment click per cridar a selectDate(dateKey, dayElement) ALERTA, FUNCIÓ NO IMPLEMENTADA ENCARA
   //  - Afegeix la casella a 'daysGrid' (appendChild)
-  for (let i = 1; i <= totalDays; i++) {
+for (let day = 1; day <= totalDays; day++) {
     const dayElement = document.createElement('div');
     dayElement.classList.add('day');
-    dayElement.textContent = i.toString();
-    const dateKey = formatDateKey(year, month, i);
-    if (dateKey === formatDateKey(new Date().getFullYear(), new Date().getMonth(), new Date().getDate())) {
+    dayElement.textContent = day;
+
+    const dateKey = formatDateKey(year, month, day);
+    if (
+      day === today.getDate() &&
+      month === today.getMonth() &&
+      year === today.getFullYear()
+    ) {
       dayElement.classList.add('today');
     }
     if (events[dateKey] && events[dateKey].length > 0) {
@@ -94,10 +102,10 @@ function renderCalendar() {
       dayElement.classList.add('selected');
     }
     dayElement.addEventListener('click', () => selectDate(dateKey, dayElement));
+
     daysGrid.appendChild(dayElement);
   }
 }
-
 // TODO: Escoltadors d'esdeveniments per als botons de navegació prevBtn i nextBtn
 // (Sumar o restar 1 mes a 'currentDate' i tornar a cridar renderCalendar())
 prevBtn.addEventListener('click', () => {
@@ -120,7 +128,7 @@ nextBtn.addEventListener('click', () => {
  */
 function selectDate(dateKey, element) {
   // TODO 1: Elimina la classe .selected de tots els dies (.day)
-  document.querySelectorAll('.day').forEach((day) => {
+  document.querySelectorAll('.day').forEach(day => {
     day.classList.remove('selected');
   });
   // TODO 2: Afegeix la classe .selected al dia clicat i actualitza 'selectedDateKey'
@@ -145,11 +153,13 @@ function renderEvents() {
   dayEvents.forEach((eventText, index) => {
     const li = document.createElement('li');
     li.textContent = eventText;
-    const removeBtn = document.createElement('span');
-    removeBtn.textContent = '✕';
-    removeBtn.classList.add('remove-event');
-    removeBtn.addEventListener('click', () => removeEvent(index));
-    li.appendChild(removeBtn);
+
+    const deleteSpan = document.createElement('span');
+    deleteSpan.textContent = '✕';
+    deleteSpan.classList.add('delete-btn');
+    deleteSpan.addEventListener('click', () => removeEvent(index));
+
+    li.appendChild(deleteSpan);
     eventsList.appendChild(li);
   });
 }
@@ -160,9 +170,8 @@ function renderEvents() {
 function addEvent(e) {
   e.preventDefault();
   // TODO 1: Valida que hi hagi un dia seleccionat (selectedDateKey) i text a l'input
-  if (!selectedDateKey || !eventInput.value.trim()) {
-    return;
-  }
+  if (!selectedDateKey || !eventInput.value.trim()) return;
+
   // TODO 2: Si no existeix events[selectedDateKey], inicialitza-ho com un array buit []
   if (!events[selectedDateKey]) {
     events[selectedDateKey] = [];
@@ -173,8 +182,6 @@ function addEvent(e) {
   eventInput.value = '';
   renderEvents();
   renderCalendar();
-  saveEvents();
-  sendNotification("Nova tasca creada", `S'ha afegit una tasca per al ${selectedDateKey}`);
 }
 
 /**
@@ -187,6 +194,7 @@ function removeEvent(index) {
   if (events[selectedDateKey].length === 0) {
     delete events[selectedDateKey];
   }
+  
   // TODO 3: Torna a cridar renderEvents() i renderCalendar()
   renderEvents();
   renderCalendar();
@@ -213,16 +221,9 @@ function saveEvents() {
  */
 function loadEvents() {
   // TODO: Utilitza localStorage.getItem('calendar_events') i JSON.parse()
+    // Retorna l'objecte obtingut o un objecte buit {} si no hi havia res guardat.
   const eventsData = localStorage.getItem('calendar_events');
-  if (eventsData) {
-    try {
-      return JSON.parse(eventsData);
-    } catch (error) {
-      console.error('Error al parsejar els esdeveniments desats a LocalStorage:', error);
-    }
-  }
-  // Retorna l'objecte obtingut o un objecte buit {} si no hi havia res guardat.
-  return {};
+  return eventsData ? JSON.parse(eventsData) : {};
 }
 
 // TODO: Modifica addEvent() i removeEvent() perquè cridin a saveEvents() després de modificar dades.
@@ -240,76 +241,63 @@ function showApiFeedback(message, type) {
 /**
    * Mostra una notificació del sistema si tenim permís concedit.
  */
-async function sendNotification(title, body) {
-  if (!("Notification" in window)) {
-    showApiFeedback("Aquest navegador no suporta notificacions del sistema.", "error");
-    return;
-  }
-
-  let permission = Notification.permission;
-  if (permission === "default") {
-    permission = await Notification.requestPermission();
-  }
-
-  if (permission === "granted") {
-    // Fem servir els paràmetres pasats a la funció
+function sendNotification(title, body) {
+  if (Notification.permission === 'granted') {
     new Notification(title, { body });
-    showApiFeedback("Notificació enviada correctament.", "success");
-  } else {
-    showApiFeedback("Has denegat el permís per rebre notificacions.", "warning");
   }
 }
 
 // Escoltador per al botó de notificacions (Demana permís i envia benvinguda)
 notifyBtn.addEventListener('click', async () => {
-  await sendNotification("Calendari Actiu", "Les notificacions s'han activat correctament!");
+  if (!("Notification" in window)) {
+    showApiFeedback("Aquest navegador no suporta notificacions.", "error");
+    return;
+  }
+
 });
 
 // TODO: Escoltador d'esdeveniment per a 'notifyBtn' (Sol·licitar permisos de notificació)
 // Mira a la pràctica AC2 com es fa!
-notifyBtn.addEventListener('click', async () => {
-  await sendNotification("Calendari Actiu", "Les notificacions s'han activat correctament!");
+  Notification.requestPermission().then(permission => {
+  if (permission === "granted") {
+    sendNotification("Calendari Actiu", "Les notificacions s'han activat correctament!");
+  } else {
+    showApiFeedback("Permís de notificació denegat.", "error");
+  }
 });
 
 // TODO: Escoltador d'esdeveniment per a 'shareBtn' (Web Share API amb fallback a clipboard)
 // Mira a la pràctica AC2 com es fa!
 shareBtn.addEventListener('click', async () => {
   if (!selectedDateKey) {
-    showApiFeedback("Selecciona un dia per compartir les teves tasques.", "warning");
+    showApiFeedback("Selecciona un dia per compartir.");
     return;
   }
 
   const dayEvents = events[selectedDateKey] || [];
-  if (dayEvents.length === 0) {
-    showApiFeedback(`No hi ha cap tasca per compartir el dia ${selectedDateKey}.`, "warning");
-    return;
-  }
-
-  
-  let textSummary = `Agenda del dia ${selectedDateKey}:\n`;
-  dayEvents.forEach((eventText, index) => {
-    textSummary += `${index + 1}. ${eventText}\n`;
-  });
-
+  const eventText = dayEvents.length > 0 ? dayEvents.join(', ') : 'No hi ha esdeveniments.';
   const shareData = {
-    title: `Agenda del dia ${selectedDateKey}`,
-    text: textSummary
+    title: `Agenda del ${selectedDateKey}`,
+    text:  `Dia: ${selectedDateKey}, Esdeveniments: ${eventText}`,
   };
-  
+
   if (navigator.share) {
     try {
       await navigator.share(shareData);
-      showApiFeedback("Esdeveniments compartits amb èxit!", "success");
-    } catch (error) {
-      if (error.name !== "AbortError") {
-        showApiFeedback("Error en compartir l'esdeveniment.", "error");
-      }
+    } catch (err) {
+      console.log("Error en compartir: " + err);
     }
-    } else {
-    showApiFeedback("El teu navegador no suporta cap opció de compartir.", "error");
+  } else {
+    // Fallback a clipboard si no es pot utilitzar Web Share
+    await navigator.clipboard.writeText(shareData.text).then(() => {
+      showApiFeedback("Enllaç copiat al porta-retalls!", "success");
+    }).catch(err => {
+      showApiFeedback("Error en copiar: " + err, "error");
+    });
   }
-});
 
+
+});
 
 // ==========================================================================
 // INICIALITZACIÓ DE L'APLICACIÓ
